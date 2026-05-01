@@ -1,7 +1,7 @@
 # Congresso NLP — Brazilian Parliamentary Votings
 
 Modular system for collecting, enriching and analysing votings from the Chamber of Deputies.
-Designed to run on **Apple Silicon** with local NLP models and persistence in **PostgreSQL (AWS RDS)**.
+Designed to run on **Apple Silicon** with local NLP models and persistence in **PostgreSQL**.
 
 ---
 
@@ -32,25 +32,10 @@ congresso_nlp/
 |---|---|---|---|
 | **Keywords** | `neuralmind/bert-large-portuguese-cased` (BERTimbau Large) | 🤗 Transformers + MPS | 4 GB |
 | **Keywords (alternative)** | `DeBERTinha` (DeBERTa v3 XSmall PT-BR) | 🤗 Transformers + MPS | 2 GB |
-| **Summary** | `Qwen2.5-7B-Instruct` | Ollama (MLX backend) | 8 GB |
+| **Summary** | `Qwen3.5-7B-Instruct` | Ollama (MLX backend) | 8 GB |
 | **Robust summary** | `Qwen2.5-14B-Instruct` | Ollama (MLX backend) | 16 GB |
 
-> **Why Qwen2.5 for summaries?** Benchmarks on Apple Silicon (M2 Ultra) show that Qwen2.5-7B with Ollama/MLX achieves ~150 tok/s and produces excellent quality output in Portuguese, outperforming Llama 3.1 8B on the same hardware. BERTimbau Large is the state of the art for feature extraction in Brazilian Portuguese.
-
----
-
-## AWS Database — Lowest Cost Recommendation
-
-### ✅ Recommended option: **Amazon RDS PostgreSQL** (db.t4g.micro)
-
-| Option | Estimated cost/month | Notes |
-|---|---|---|
-| **RDS PostgreSQL db.t4g.micro** | ~**$15–20/month** | Best cost-to-performance ratio for moderate usage |
-| RDS PostgreSQL db.t3.micro | ~$15–18/month | Alternative without Graviton |
-| Aurora Serverless v2 | ~$40–70/month | More expensive; only worthwhile for unpredictable workloads |
-| Aurora Provisioned t3.medium | ~$69+/month | Oversized for this use case |
-
-> **RDS PostgreSQL db.t4g.micro** is the ideal choice: free tier available for 12 months (750 hours/month), Graviton2 for better price-performance, native JSONB support (ideal for keywords and metadata), `pg_trgm` extension for full-text search, and predictable fixed costs.
+> **Why Qwen3.5 for summaries?** Benchmarks on Apple Silicon (M2 Ultra) show that Qwen3.5-7B with Ollama/MLX achieves ~150 tok/s and produces excellent quality output in Portuguese, outperforming Llama 3.1 8B on the same hardware. BERTimbau Large is the state of the art for feature extraction in Brazilian Portuguese.
 
 ---
 
@@ -89,3 +74,5 @@ agent.run(data_inicio="2024-03-01", data_fim="2024-03-31")
 from core.database import query_deputado_votacoes
 rows = query_deputado_votacoes(nome_deputado="Tabata Amaral", tema_keyword="educação")
 ```
+
+An alternative is to run the script test_pipeline_agentes.py after local configuration been set
