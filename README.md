@@ -1,91 +1,91 @@
-# Congresso NLP — Votações Parlamentares Brasileiras
+# Congresso NLP — Brazilian Parliamentary Votings
 
-Sistema modular para coleta, enriquecimento e análise de votações da Câmara dos Deputados.
-Projetado para execução em **Apple Silicon** com modelos NLP locais e persistência em **PostgreSQL (AWS RDS)**.
+Modular system for collecting, enriching and analysing votings from the Chamber of Deputies.
+Designed to run on **Apple Silicon** with local NLP models and persistence in **PostgreSQL (AWS RDS)**.
 
 ---
 
-## Arquitetura
+## Architecture
 
 ```
 congresso_nlp/
 ├── agents/
-│   ├── collector_agent.py      # Coleta votações e votos via API da Câmara
-│   ├── nlp_agent.py            # Resumo + palavras-chave (modelos locais)
-│   └── pipeline_agent.py      # Orquestrador: executa coleta → NLP → persistência
+│   ├── collector_agent.py      # Collects votings and votes via the Câmara API
+│   ├── nlp_agent.py            # Summary + keywords (local models)
+│   └── pipeline_agent.py      # Orchestrator: runs collection → NLP → persistence
 ├── core/
-│   ├── api_camara.py           # Funções puras da API da Câmara dos Deputados
-│   ├── nlp_local.py            # BERTimbau (keywords) + Ollama/MLX (resumo)
-│   └── database.py             # Conexão e operações PostgreSQL (SQLAlchemy)
+│   ├── api_camara.py           # Pure functions for the Câmara dos Deputados API
+│   ├── nlp_local.py            # BERTimbau (keywords) + Ollama/MLX (summary)
+│   └── database.py             # PostgreSQL connection and operations (SQLAlchemy)
 ├── models/
-│   └── schema.py               # Modelos ORM (SQLAlchemy)
-├── config.py                   # Configurações e variáveis de ambiente
+│   └── schema.py               # ORM models (SQLAlchemy)
+├── config.py                   # Configuration and environment variables
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## Stack de Modelos NLP Locais (Apple Silicon)
+## Local NLP Model Stack (Apple Silicon)
 
-| Tarefa | Modelo recomendado | Runtime | RAM mínima |
+| Task | Recommended model | Runtime | Minimum RAM |
 |---|---|---|---|
 | **Keywords** | `neuralmind/bert-large-portuguese-cased` (BERTimbau Large) | 🤗 Transformers + MPS | 4 GB |
-| **Keywords alternativo** | `DeBERTinha` (DeBERTa v3 XSmall PT-BR) | 🤗 Transformers + MPS | 2 GB |
-| **Resumo (sumarização)** | `Qwen2.5-7B-Instruct` | Ollama (MLX backend) | 8 GB |
-| **Resumo robusto** | `Qwen2.5-14B-Instruct` | Ollama (MLX backend) | 16 GB |
+| **Keywords (alternative)** | `DeBERTinha` (DeBERTa v3 XSmall PT-BR) | 🤗 Transformers + MPS | 2 GB |
+| **Summary** | `Qwen2.5-7B-Instruct` | Ollama (MLX backend) | 8 GB |
+| **Robust summary** | `Qwen2.5-14B-Instruct` | Ollama (MLX backend) | 16 GB |
 
-> **Por quê Qwen2.5 para resumo?** Benchmarks em Apple Silicon (M2 Ultra) mostram que o Qwen2.5-7B com Ollama/MLX atinge ~150 tok/s e tem excelente qualidade em português, superando Llama 3.1 8B no mesmo hardware. BERTimbau Large é o estado-da-arte para extração de features em PT-BR.
+> **Why Qwen2.5 for summaries?** Benchmarks on Apple Silicon (M2 Ultra) show that Qwen2.5-7B with Ollama/MLX achieves ~150 tok/s and produces excellent quality output in Portuguese, outperforming Llama 3.1 8B on the same hardware. BERTimbau Large is the state of the art for feature extraction in Brazilian Portuguese.
 
 ---
 
-## Banco de Dados AWS — Recomendação de Menor Custo
+## AWS Database — Lowest Cost Recommendation
 
-### ✅ Opção recomendada: **Amazon RDS PostgreSQL** (db.t4g.micro)
+### ✅ Recommended option: **Amazon RDS PostgreSQL** (db.t4g.micro)
 
-| Opção | Custo estimado/mês | Observação |
+| Option | Estimated cost/month | Notes |
 |---|---|---|
-| **RDS PostgreSQL db.t4g.micro** | ~**$15–20/mês** | Melhor custo-benefício para uso moderado |
-| RDS PostgreSQL db.t3.micro | ~$15–18/mês | Alternativa sem Graviton |
-| Aurora Serverless v2 | ~$40–70/mês | Mais caro; vale apenas para cargas imprevisíveis |
-| Aurora Provisioned t3.medium | ~$69+/mês | Superdimensionado para este caso |
+| **RDS PostgreSQL db.t4g.micro** | ~**$15–20/month** | Best cost-to-performance ratio for moderate usage |
+| RDS PostgreSQL db.t3.micro | ~$15–18/month | Alternative without Graviton |
+| Aurora Serverless v2 | ~$40–70/month | More expensive; only worthwhile for unpredictable workloads |
+| Aurora Provisioned t3.medium | ~$69+/month | Oversized for this use case |
 
-> **RDS PostgreSQL db.t4g.micro** é a escolha ideal: free tier disponível por 12 meses (750h/mês), Graviton2 para melhor price-performance, suporte nativo a JSONB (ideal para keywords e metadados), extensão `pg_trgm` para busca textual, e custo fixo previsível.
+> **RDS PostgreSQL db.t4g.micro** is the ideal choice: free tier available for 12 months (750 hours/month), Graviton2 for better price-performance, native JSONB support (ideal for keywords and metadata), `pg_trgm` extension for full-text search, and predictable fixed costs.
 
 ---
 
-## Instalação
+## Installation
 
 ```bash
-# 1. Dependências Python
+# 1. Python dependencies
 pip install -r requirements.txt
 
-# 2. Modelos locais — instalar Ollama (macOS)
+# 2. Local models — install Ollama (macOS)
 brew install ollama
-ollama pull qwen2.5:7b          # modelo de resumo padrão
-# ollama pull qwen2.5:14b       # versão mais robusta (requer 16 GB RAM)
+ollama pull qwen2.5:7b          # default summary model
+# ollama pull qwen2.5:14b       # more robust version (requires 16 GB RAM)
 
-# 3. Variáveis de ambiente
+# 3. Environment variables
 cp .env.example .env
-# editar .env com credenciais do RDS
+# edit .env with your RDS credentials
 
-# 4. Criar tabelas no banco
+# 4. Create database tables
 python -c "from models.schema import init_db; init_db()"
 ```
 
 ---
 
-## Uso Rápido
+## Quick Start
 
 ```python
 from agents.pipeline_agent import PipelineAgent
 
 agent = PipelineAgent()
 
-# Coletar votações de um período e enriquecer com NLP
+# Collect votings for a period and enrich with NLP
 agent.run(data_inicio="2024-03-01", data_fim="2024-03-31")
 
-# Consultar como um deputado votou em temas específicos
+# Query how a deputy voted on specific topics
 from core.database import query_deputado_votacoes
 rows = query_deputado_votacoes(nome_deputado="Tabata Amaral", tema_keyword="educação")
 ```
